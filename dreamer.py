@@ -452,7 +452,7 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
                 PIL.Image.fromarray(np.uint8(hallu)).save(saveframe)
                 var_counter += 1
             else:
-                print ('Finished processing all frames')
+                print ('Finished processing al1l frames')
     else:
         # process anim frames
         for v in range(len(vids)):
