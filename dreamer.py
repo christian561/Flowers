@@ -254,19 +254,20 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
     make_sure_path_exists(outputdir)
     if modeldir is None: modeldir = '/content/DeepDreamAnimV2/models'
     if preview is None: preview = 0
-    if octaves is None: octaves = 4
-    if octave_scale is None: octave_scale = 1.5
+    if octaves is None: octaves = 5
+    if octave_scale is None: octave_scale = 2
     if iterations is None: iterations = 10
-    if jitter is None: jitter = 32
+    if jitter is None: jitter = 16
     if zoom is None: zoom = 1
     if stepsize is None: stepsize = 1.5
-    if blendflow is None: blendflow = 0.75
-    if blendstatic is None: blendstatic = 0.1
+    if blendflow is None: blendflow = 0
+    if blendstatic is None: blendstatic = 0
     if layers is None: layers = ['inception_4c/output']
+    #if layers is None: layers = ['inception_4d/pool']
     if gpu is None: gpu = 1
     if flow is None: flow = 0
-    if flowthresh is None: flow = 10
-    if divide is None: divide = 0
+    if flowthresh is None: flow = 0
+    if divide is None: divide = 1
     if modeln is None: modeln = 'bvlc_googlenet' 
     # net.blobs.keys()
 
@@ -311,6 +312,7 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
     frame = np.float32(img)
 
     # guide
+    guide = None
     if guide is not None:
         guideimg = PIL.Image.open(os.path.join(inputdir, str(guide)+'.png'))  
         guideimgresized = guideimg.resize((224, 224), PIL.Image.ANTIALIAS)
@@ -338,25 +340,26 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
         divide = 2
         print("net " + str(net))
         print("frame " + str(frame))
-        iter_n = 32
+        iter_n = 10
         print("iter_n " + str(iter_n))
         step_size = 1.5
         print("step_size " + str(step_size))
-        octave_n = 3
+        octave_n = 4
+        octave_scale = 1.9
         print("octave_n " + str(octave_n))
         print("octave_scale " + str(octave_scale))
-        jitter = 32
+        jitter = 24
         print("jitter " + str(jitter))
         print("objective " + str(objective))
         print("endparam " + str(endparam))
         maxWidth = 1500
         print("maxWidth " + str(maxWidth))
         if divide == 0:
-            return deepdream(net, frame, iter_n=itr, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, end=endparam, objective=objective)
+            return deepdream(net, frame, iter_n, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, end=endparam, objective=objective)
         elif divide == 1:
-            return deepdreamDivide(net, frame, iter_n=itr, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, end=endparam, objective=objective, maxWidth=maxWidth, maxHeight=maxHeight)
+            return deepdreamDivide(net, frame, iter_n, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, end=endparam, objective=objective, maxWidth=maxWidth, maxHeight=maxHeight)
         elif divide == 2:
-            return deepdreamHalf(net, frame, iter_n=itr, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, objective=objective, end=endparam, maxWidth=maxWidth )
+            return deepdreamHalf(net, frame, iter_n, step_size=stepsize, octave_n=octaves, octave_scale=octave_scale, jitter=jitter, objective=objective, end=endparam, maxWidth=maxWidth )
                 
 
     def getStats(saveframe, var_counter, vids, difference):
@@ -383,8 +386,8 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
             hallu = getFrame(net, img, iterations, layers[0], objective_guide)
                 
         np.clip(hallu, 0, 255, out=hallu)
-        saveframe = outputdir + '/' + 'frame_000000.png'
-        PIL.Image.fromarray(np.uint8(hallu)).save(os.path.join(outputdir, 'frame_000000.png'))
+        saveframe = outputdir + '/' + 'flower0.png'
+        PIL.Image.fromarray(np.uint8(hallu)).save(os.path.join(outputdir, 'flower0.png'))
         grayImg = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
         
         for v in range(len(vids)):
@@ -445,7 +448,7 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
                 later = time.time()
                 difference = int(later - now)
 
-                saveframe = os.path.join(outputdir, 'frame_%06d.png' % (var_counter))
+                saveframe = os.path.join(outputdir, 'flower%06d.png' % (var_counter))
                 getStats(saveframe, var_counter, vids, difference)
 
                 np.clip(hallu, 0, 255, out=hallu)
@@ -485,6 +488,7 @@ def main(inputdir, outputdir, modeldir, modeln, preview, octaves, octave_scale, 
                 newframe = os.path.join(inputdir, vids[v + 1])
 
                 # blend
+                blendstatic = 0
                 if blendstatic == 0:
                     newimg = PIL.Image.open(newframe)
                     if preview is not 0:
@@ -524,7 +528,7 @@ if __name__ == "__main__":
     parser.add_argument('-z', '--zoom', help='Zoom in Amount. Default: 1', type=int, required=False)
     parser.add_argument('-s', '--stepsize', help='Step Size. Default: 1.5', type=float, required=False)
     parser.add_argument('-bm', '--blendflow', help='Blend Amount for flow area. Default: 0.5', type=float, required=False)
-    parser.add_argument('-bs', '--blendstatic', help='Blend Amount for static area. Default: 0.5', type=float, required=False)
+    parser.add_argument('-bs', '--blendstatic', help='Blend Amount for static area. Default: 0', type=float, required=False)
     parser.add_argument('-l', '--layers', help='Layers Loop. Default: inception_4c/output', nargs="+", type=str,
                         required=False)
     parser.add_argument('-e', '--extract', help='Extract Frames From Video.', type=int, required=False)
